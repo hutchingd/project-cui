@@ -457,7 +457,7 @@ input, textarea { font-family: var(--font); }
 }
 .editor-empty .empty-title { font-size: 16px; font-weight: 600; color: var(--text); }
 .editor-empty .empty-sub { font-size: 12.5px; max-width: 380px; text-align: center; line-height: 1.7; }
-.empty-actions { display: flex; gap: 10px; margin-top: 4px; }
+.empty-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
 .empty-action {
   padding: 8px 16px;
   border-radius: 9px;
@@ -474,25 +474,42 @@ input, textarea { font-family: var(--font); }
 
 monaco-editor { position: absolute; inset: 0; }
 
-/* Fallback plain-text editor (when Monaco fails to load) */
-.fallback-editor {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  width: 100%;
-  height: 100%;
-  padding: 12px 16px;
-  background: var(--bg-deep);
-  color: var(--text);
-  border: none;
-  outline: none;
-  resize: none;
-  font-family: var(--mono);
-  font-size: 13.5px;
-  line-height: 1.6;
-  white-space: pre;
+/* Fallback plain-text editor (when Monaco fails to load) - keeps syntax colors
+   via a highlighted <pre> underlay synced to a transparent <textarea>. */
+.fallback-wrap { position: absolute; inset: 0; background: var(--bg-deep); }
+.fallback-pre {
+  position: absolute; inset: 0; z-index: 4;
+  margin: 0; padding: 12px 16px;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre; tab-size: 2;
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.6;
+  color: var(--text-muted);
 }
+.fallback-editor {
+  position: absolute; inset: 0; z-index: 5;
+  width: 100%; height: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
+  border: none; outline: none; resize: none;
+  font-family: var(--mono); font-size: 13.5px; line-height: 1.6;
+  white-space: pre; tab-size: 2;
+  scrollbar-width: none;
+}
+.fallback-editor::-webkit-scrollbar { display: none; }
 .fallback-editor::placeholder { color: var(--text-faint); }
+.fallback-editor::selection { background: rgba(99,102,241,.4); }
+.fallback-pre .hl-kw { color: #c792ea; }
+.fallback-pre .hl-str { color: #c3e88d; }
+.fallback-pre .hl-num { color: #f78c6c; }
+.fallback-pre .hl-com { color: #5c6378; font-style: italic; }
+.fallback-pre .hl-op { color: #89ddff; }
+.fallback-pre .hl-fn { color: #82aaff; }
+.fallback-pre .hl-type { color: #f07178; }
+.fallback-pre .hl-lit { color: #ffcb6b; }
+.fallback-pre .hl-decor { color: #c792ea; font-style: italic; }
 
 /* ============ BOTTOM PANEL (Terminal) ============ */
 .bottom-panel {
@@ -1069,7 +1086,8 @@ monaco-editor { position: absolute; inset: 0; }
   .ide-root { height: 100dvh; }
 
   /* ---- Top bar ---- */
-  .topbar { height: 52px; padding: 0 10px; gap: 6px; }
+  .topbar { height: 52px; padding: 0 10px; gap: 6px; overflow: hidden; }
+  .topbar .brand { white-space: nowrap; flex-shrink: 0; }
   .topbar-hamburger { display: grid; width: 38px; height: 38px; font-size: 16px; }
   .sidebar-desktop-btn { display: none; }
   .brand { font-size: 13px; }
@@ -1078,6 +1096,13 @@ monaco-editor { position: absolute; inset: 0; }
   .topbar-right { gap: 2px; }
   .topbar-right .icon-btn { width: 38px; height: 38px; font-size: 16px; }
   .topbar .run-btn { height: 36px; padding: 0 12px; font-size: 12.5px; }
+  /* Only the essentials stay in the top bar on phones – the rest are in the
+     bottom nav (Files / Terminal / New / Find / Stats / Run). */
+  .topbar-right .people-btn,
+  .topbar-right .palette-btn,
+  .topbar-right .term-btn,
+  .topbar-right .upload-btn,
+  .topbar-right .run-btn { display: none; }
 
   /* ---- Hide desktop-only chrome ---- */
   .activity-bar { display: none; }

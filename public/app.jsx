@@ -75,6 +75,72 @@ function applyEditsToText(prev, edits) {
   return out;
 }
 
+/* Minimal syntax highlighter for the plain-text fallback editor, so colors
+   survive even while/if Monaco is still loading. Colors follow nova-dark. */
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function hlRulesFor(lang) {
+  const r = [];
+  const C = (src, cls) => r.push({ src, cls });
+  if (lang === 'python' || lang === 'shell' || lang === 'ruby' || lang === 'perl' ||
+      lang === 'yaml' || lang === 'dockerfile' || lang === 'r' || lang === 'makefile' ||
+      lang === 'powershell' || lang === 'bat' || lang === 'tcl') {
+    C('#.*', 'hl-com');                  // hash-first comments
+    C('<!--[\\s\\S]*?-->', 'hl-com');
+  } else if (lang === 'html' || lang === 'xml' || lang === 'markdown') {
+    C('<!--[\\s\\S]*?-->', 'hl-com');    // markup comments
+  } else {
+    C('\\/\\/.*', 'hl-com');             // C-style comments
+    C('\\/\\*[\\s\\S]*?\\*/', 'hl-com');
+  }
+  C('"(?:[^"\\\\\\n]|\\\\.)*"', 'hl-str');
+  if (lang === 'javascript' || lang === 'typescript' || lang === 'python' ||
+      lang === 'ruby' || lang === 'php' || lang === 'shell' || lang === 'sql') {
+    C("'(?:[^'\\\\\\n]|\\\\.)*'", 'hl-str');
+  }
+  if (lang === 'javascript' || lang === 'typescript' || lang === 'markdown' || lang === 'html') {
+    C('`(?:[^`\\\\\\n]|\\\\.)*`', 'hl-str');
+  }
+  C('\\b0[xX][0-9a-fA-F_]+\\b|\\b\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b', 'hl-num');
+  C('[&|+\\-*/%=<>!?^~]+', 'hl-op');
+  C('\\b(?:const|let|var|function|return|if|else|elif|for|while|do|switch|case|default|break|continue|new|delete|typeof|instanceof|in|of|this|super|class|extends|static|async|await|try|catch|finally|throw|import|export|from|require|def|lambda|yield|pass|and|or|not|is|None|True|False|package|public|private|protected|interface|enum|implements|abstract|readonly|namespace|using|struct|void|int|float|double|bool|string|char|byte|long|short|signed|unsigned|print|printf|global|local|include|define|ifdef|ifndef|endif|then|end|begin|procedure|select|from|where|insert|update|delete|create|table|as|join|on|group|order|by|having|limit|values|into|set|grant|revoke|ssize|size_t|callback|prop|use|fn|let-mut|mut|pub|impl|trait|mod|self|Some|None|Ok|Err|match|let)\\b', 'hl-kw');
+  C('\\b(?:true|false|null|undefined|nil|NaN|Infinity)\\b', 'hl-lit');
+  if (lang === 'python') C('@\\w+', 'hl-decor');
+  C('\\b(?:class|struct|interface|trait|module|def|function|func|fn)\\s+[A-Za-z_$][\\w$]*', 'hl-kw');
+  C('[A-Za-z_$][\\w$]*(?=\\s*\\()', 'hl-fn');
+  C('\\b[A-Z][A-Za-z0-9_]*\\b', 'hl-type');
+  return r;
+}
+
+const HL_PLAIN = new Set(['plaintext', 'txt', 'log', 'markdown', 'makefile', 'dockerfile']);
+function highlightCode(text, path) {
+  const src = String(text || '');
+  if (src.length > 400000) return escapeHtml(src);
+  const lang = langForPath(path);
+  const ext = (path.split('.').pop() || '').toLowerCase();
+  const key = ext === 'txt' || ext === 'log' ? ext : lang;
+  if (HL_PLAIN.has(key)) return escapeHtml(src);
+  const rules = hlRulesFor(lang);
+  const master = new RegExp(rules.map((x) => '(' + x.src + ')').join('|'), 'g');
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = master.exec(src))) {
+    if (m.index > last) out += escapeHtml(src.slice(last, m.index));
+    let cls = null;
+    for (let i = 0; i < rules.length; i++) {
+      if (m[i + 1] !== undefined) { cls = rules[i].cls; break; }
+    }
+    out += cls ? `<span class="${cls}">${escapeHtml(m[0])}</span>` : escapeHtml(m[0]);
+    last = m.index + m[0].length;
+    if (m[0].length === 0) master.lastIndex++;
+  }
+  out += escapeHtml(src.slice(last));
+  return out;
+}
+
 /* ---------------- File icon mapping ---------------- */
 const ICONS = {
   js: ['fa-brands fa-js', '#f7df1e'], jsx: ['fa-brands fa-react', '#22d3ee'], ts: ['fa-brands fa-js', '#3178c6'],
@@ -1525,9 +1591,9 @@ function TopBar({ wsStatus, onRun, onPalette, onSidebar, onTerm, termOpen, onUpl
           <i className="fa-brands fa-google-drive" />
           {driveConnected && <span className="drive-dot" />}
         </button>
-        <button className="icon-btn" title="Command palette (Ctrl+K)" onClick={onPalette}><i className="fa-solid fa-magnifying-glass" /></button>
-        <button className={`icon-btn ${termOpen ? 'active' : ''}`} title="Toggle terminal" onClick={onTerm}><i className="fa-solid fa-terminal" /></button>
-        <button className="icon-btn" title="Upload files" onClick={onUpload}><i className="fa-solid fa-upload" /></button>
+        <button className={`icon-btn palette-btn`} title="Command palette (Ctrl+K)" onClick={onPalette}><i className="fa-solid fa-magnifying-glass" /></button>
+        <button className={`icon-btn term-btn ${termOpen ? 'active' : ''}`} title="Toggle terminal" onClick={onTerm}><i className="fa-solid fa-terminal" /></button>
+        <button className="icon-btn upload-btn" title="Upload files" onClick={onUpload}><i className="fa-solid fa-upload" /></button>
         <button className="icon-btn save-btn" title="Save file (Ctrl+S)" disabled={!canSave} onClick={onSave}><i className="fa-solid fa-floppy-disk" /></button>
         <button className="icon-btn sidebar-desktop-btn" title="Toggle sidebar (Ctrl+B)" onClick={onSidebar}><i className="fa-solid fa-panel-left" /></button>
         <button className="run-btn" onClick={onRun}><i className="fas fa-play" /> Run</button>
@@ -2122,7 +2188,13 @@ function ContextMenu({ menu, onClose }) {
    ============================================================ */
 function FallbackEditor({ path, initial, registerGet, registerApply, onDirty, onRelay }) {
   const taRef = useRef(null);
+  const preRef = useRef(null);
   const [val, setVal] = useState(initial || '');
+
+  const syncScroll = () => {
+    const ta = taRef.current, pre = preRef.current;
+    if (ta && pre) { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; }
+  };
 
   useEffect(() => { setVal(initial || ''); }, [path, initial]);
   useEffect(() => {
@@ -2144,17 +2216,26 @@ function FallbackEditor({ path, initial, registerGet, registerApply, onDirty, on
   }, [registerApply]);
 
   return (
-    <textarea
-      ref={taRef}
-      className="fallback-editor"
-      value={val}
-      onChange={(e) => { setVal(e.target.value); onDirty(path); if (onRelay) onRelay(); }}
-      placeholder="Plain-text editing (code editor failed to load)"
-      spellCheck="false"
-      autoCorrect="off"
-      autoCapitalize="off"
-      wrap="off"
-    />
+    <div className="fallback-wrap">
+      <pre
+        ref={preRef}
+        className="fallback-pre"
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: highlightCode(val, path) }}
+      />
+      <textarea
+        ref={taRef}
+        className="fallback-editor"
+        value={val}
+        onChange={(e) => { setVal(e.target.value); onDirty(path); if (onRelay) onRelay(); }}
+        onScroll={syncScroll}
+        placeholder="Plain-text editing (code editor failed to load)"
+        spellCheck="false"
+        autoCorrect="off"
+        autoCapitalize="off"
+        wrap="off"
+      />
+    </div>
   );
 }
 
