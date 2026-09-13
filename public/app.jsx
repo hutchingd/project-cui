@@ -659,8 +659,24 @@ function App() {
     }];
   }
 
-  function scheduleOpRelay(path) {
+  /* Relay local edits to the room. When Monaco gives us the real per-keystroke
+     change descriptors we relay them immediately (true real-time); the plain-text
+     fallback has no change events so it falls back to a short content diff. */
+  function scheduleOpRelay(path, changes) {
     if (!inRoomRef.current || frozenRef.current) return;
+    if (changes && changes.length) {
+      const model = modelsRef.current.get(path);
+      const edits = changes.map((c) => ({
+        range: {
+          startLineNumber: c.range.startLineNumber, startColumn: c.range.startColumn,
+          endLineNumber: c.range.endLineNumber, endColumn: c.range.endColumn,
+        },
+        text: c.text || '',
+      }));
+      if (model) lastSentRef.current.set(path, model.getValue());
+      sendMp({ type: 'mp:op', path, edits });
+      return;
+    }
     clearTimeout(mpOpTimerRef.current);
     mpOpTimerRef.current = setTimeout(() => {
       let content;
@@ -673,7 +689,7 @@ function App() {
       const edits = makeEdits(last, content);
       lastSentRef.current.set(path, content);
       if (edits.length) sendMp({ type: 'mp:op', path, edits });
-    }, 400);
+    }, 90);
   }
 
   function applyRemoteOps(from, path, edits) {
@@ -862,7 +878,7 @@ function App() {
         return; // this is the remote edit we just applied – don't re-relay
       }
       if (!isSavingRef.current) markDirty(p);
-      scheduleOpRelay(p);
+      scheduleOpRelay(p, (e && e.changes) || null);
     });
     editorRef.current = ed;
     // Heal: a file may already be open (opened before this editor existed / while
