@@ -1100,7 +1100,6 @@ monaco-editor { position: absolute; inset: 0; }
   .topbar .run-btn { height: 36px; padding: 0 12px; font-size: 12.5px; }
   /* Only the essentials stay in the top bar on phones – the rest are in the
      bottom nav (Files / Terminal / New / Find / Stats / Run). */
-  .topbar-right .people-btn,
   .topbar-right .palette-btn,
   .topbar-right .upload-btn,
   .topbar-right .run-btn { display: none; }
