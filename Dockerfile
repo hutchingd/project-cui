@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
+RUN npm i && npm install express
 
 COPY server ./server
 COPY public ./public
