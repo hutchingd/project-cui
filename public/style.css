@@ -511,6 +511,8 @@ monaco-editor { position: absolute; inset: 0; }
 .fallback-pre .hl-lit { color: #ffcb6b; }
 .fallback-pre .hl-decor { color: #c792ea; font-style: italic; }
 
+.bottom-panel.closed { height: 0 !important; min-height: 0; overflow: hidden; border-top: none; padding-top: 0; }
+
 /* ============ BOTTOM PANEL (Terminal) ============ */
 .bottom-panel {
   display: flex;

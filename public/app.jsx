@@ -1427,8 +1427,8 @@ function App() {
             </div>
           </div>
 
-          {termOpen && (isMobile ? (
-            <div className="term-fullscreen">
+          {isMobile ? (
+            <div className="term-fullscreen" style={termOpen ? undefined : { display: 'none' }}>
               <div className="term-fs-bar">
                 <span className="term-fs-title"><i className="fa-solid fa-terminal" style={{ color: 'var(--accent-3)' }} /> Project CUI Terminal</span>
                 <button className="icon-btn" onClick={() => setTermOpen(false)} title="Close terminal"><i className="fas fa-chevron-down" /></button>
@@ -1437,12 +1437,13 @@ function App() {
             </div>
           ) : (
             <BottomPanel
-              height={termHeight}
+              height={termOpen ? termHeight : 0}
+              closed={!termOpen}
               startDrag={startTermDrag}
               onClose={() => setTermOpen(false)}
               wsRef={wsRef}
             />
-          ))}
+          )}
 
           <StatusBar
             statusInfo={statusInfo}
@@ -1728,7 +1729,7 @@ function TerminalKeys({ onKey }) {
   );
 }
 
-function BottomPanel({ height, startDrag, onClose, wsRef }) {
+function BottomPanel({ height, startDrag, onClose, wsRef, closed }) {
   const [tabsState, setTabsState] = useState([]); // {id, title}
   const [activeId, setActiveId] = useState(null);
   const containers = useRef({});
@@ -1910,7 +1911,7 @@ function BottomPanel({ height, startDrag, onClose, wsRef }) {
   }, [activeId, tabsState, wsSend]);
 
   return (
-    <div className="bottom-panel" style={{ height }}>
+    <div className={`bottom-panel${closed ? ' closed' : ''}`} style={{ height }}>
       <div className="bottom-panel-handle" onMouseDown={startDrag} />
       <div className="terminal-header">
         {tabsState.map((t) => (
