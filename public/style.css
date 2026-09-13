@@ -1100,7 +1100,6 @@ monaco-editor { position: absolute; inset: 0; }
      bottom nav (Files / Terminal / New / Find / Stats / Run). */
   .topbar-right .people-btn,
   .topbar-right .palette-btn,
-  .topbar-right .term-btn,
   .topbar-right .upload-btn,
   .topbar-right .run-btn { display: none; }
 
