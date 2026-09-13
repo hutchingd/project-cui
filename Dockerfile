@@ -16,6 +16,5 @@ ENV IDEROOT=/data
 EXPOSE 3300
 
 # Persistent user files live in /data (mount a volume here)
-VOLUME /data
 
 CMD ["node", "server/index.js"]
