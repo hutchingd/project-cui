@@ -1,21 +1,17 @@
-FROM node:20-alpine
+# Use the latest Node.js Alpine image
+FROM node:latest-alpine
 
+# Install required build tools and dependencies
 RUN apk add --no-cache python3 make g++ coreutils
 
+# Set working directory
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --omit=dev express
+# Copy everything with root ownership
+COPY . .
 
-COPY server ./server
-COPY public ./public
+# Install dependencies
+RUN npm install
 
-RUN mkdir -p /data \
- && chmod -R 777 /app /data \
- && chown -R root:root /app /data
-
-ENV PORT=3300
-ENV IDEROOT=/data
-EXPOSE 3300
-
-CMD ["node", "server/index.js"]
+# Run as root (default) - has full file access
+CMD ["node", "index.js"]
