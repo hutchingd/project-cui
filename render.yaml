@@ -1,0 +1,18 @@
+# Render Blueprint - Deploy Project CUI as a web service.
+# 1. New -> Blueprint -> connect this repo.
+# 2. Render builds the image from ./Dockerfile automatically.
+services:
+  - type: web
+    name: project-cui
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/status
+    envVars:
+      # Railway/Render inject a PORT at runtime; this is just a sane default.
+      - key: PORT
+        value: "3000"
+      # Where app data + each user's sandbox folder live.
+      # For persistent storage, add a Render Disk mounted here (paid plans)
+      # and keep IDEROOT pointing at it.
+      - key: IDEROOT
+        value: /data

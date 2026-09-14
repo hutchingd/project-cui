@@ -1,41 +1,30 @@
-# Use LTS Alpine for stability
-FROM node:lts-alpine
+# ---------------- Project CUI - container image ----------------
+# Works on Railway, Render, Fly.io, and any Docker host.
+# HTTP + WebSocket share the same PORT (Railway/Render inject it at runtime).
+FROM node:20-alpine
 
-# Install build tools + dependencies required by node-pty
-# ADDED: procps (full ps command) and shadow (user management)
-RUN apk add --no-cache python3 make g++ coreutils bash procps shadow
+# node-pty requires native compilation on Alpine (musl).
+RUN apk add --no-cache python3 make g++ && apk add --no-cache bash
 
-# Clear ALL inherited npm/proxy settings from the build environment
-ENV NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ \
-    NPM_CONFIG_PROXY= \
-    NPM_CONFIG_HTTPS_PROXY= \
-    NPM_CONFIG_STRICT_SSL=true \
-    HTTP_PROXY= \
-    HTTPS_PROXY= \
-    http_proxy= \
-    https_proxy= \
-    NO_PROXY=registry.npmjs.org
-
-# Set working directory
 WORKDIR /app
 
-# Copy package.json FIRST (so we control the install step)
-COPY package.json ./
+# Install deps first for better layer caching.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
-# Remove any Replit-tied npm config/lockfiles that may have been copied
-RUN rm -f .npmrc package-lock.json npm-shrinkwrap.json
+COPY server ./server
+COPY public ./public
 
-# Force public registry globally + install dependencies fresh
-RUN npm config set registry https://registry.npmjs.org/ && \
-    npm config delete proxy || true && \
-    npm config delete https-proxy || true && \
-    npm install --no-audit --no-fund
+# App data (database.json + each registered user's sandbox folder).
+# Override IDEROOT at runtime if your platform mounts a disk elsewhere.
+ENV IDEROOT=/data
+ENV NODE_ENV=production
+# EXPOSE documents the port; Railway/Render inject PORT at runtime.
+EXPOSE 3000
 
-# Now copy the rest of the project files
-COPY . .
+VOLUME /data
 
-# Ensure no Replit config sneaks back in after full copy
-RUN rm -f .npmrc package-lock.json
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3300)+'/api/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Run the app (package.json has "start": "node server/index.js")
-CMD ["npm", "start"]
+CMD ["node", "server/index.js"]

@@ -41,6 +41,22 @@ docker run -p 3300:3300 -v $(pwd)/data:/data \
   project-cui
 ```
 
+## Deploy to Railway / Render
+
+The repo ships a root `Dockerfile` (used by both platforms) plus a `render.yaml`
+blueprint. HTTP and WebSocket share the same port, which the platform injects via
+`PORT`.
+
+**Railway** — create a new project linked to this repo; Railway auto-detects the
+`Dockerfile`. For persistent files add a volume mounted at `/data` (`IDEROOT`).
+
+**Render** — New → Blueprint → select this repo (uses `render.yaml`) or a Docker
+web service pointing at the root `Dockerfile`. Health check: `/api/status`.
+
+Both platforms should set `PORT` automatically. Data (users + `database.json`)
+lives under `/data` (env `IDEROOT=/data`); mounting a disk there keeps it across
+redeploys.
+
 ## Google Drive backup
 
 1. Create a **Desktop** OAuth client in Google Cloud, enable the Drive API.
