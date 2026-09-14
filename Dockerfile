@@ -2,7 +2,8 @@
 FROM node:lts-alpine
 
 # Install build tools + dependencies required by node-pty
-RUN apk add --no-cache python3 make g++ coreutils bash
+# ADDED: procps (full ps command) and shadow (user management)
+RUN apk add --no-cache python3 make g++ coreutils bash procps shadow
 
 # Clear ALL inherited npm/proxy settings from the build environment
 ENV NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ \
