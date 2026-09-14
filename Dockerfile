@@ -25,8 +25,6 @@ EXPOSE 3000
 # Ensure /data exists even if no volume is mounted (Railway, etc.)
 RUN mkdir -p /data
 
-VOLUME /data
-
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3300)+'/api/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
