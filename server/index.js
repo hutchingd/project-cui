@@ -5,6 +5,19 @@ const crypto = require('crypto');
 const { execSync } = require('child_process');
 const { Server } = require('ws');
 const pty = require('node-pty');
+
+/* Determine the default shell at startup. Prefer bash, fall back to sh for
+   minimal containers (Alpine, Nixpacks, etc.) where bash may not exist. */
+const SHELL_PATH = process.env.SHELL || (() => {
+  if (os.platform() === 'win32') return 'powershell.exe';
+  try {
+    const check = require('fs').existsSync;
+    for (const sh of ['/bin/bash', '/usr/bin/bash', '/bin/sh']) {
+      try { if (check(sh)) return sh; } catch (_) {}
+    }
+  } catch (_) {}
+  return '/bin/sh';
+})();
 const os = require('os');
 
 const app = express();
@@ -1169,7 +1182,7 @@ function startWSS(server) {
           const rows = Math.max(2, msg.rows || 24);
           let session = termSessions.get(id);
           if (!session) {
-            const shell = process.env.SHELL || (os.platform() === 'win32' ? 'powershell.exe' : '/bin/bash');
+            const shell = SHELL_PATH;
             const cwd = msg.cwd ? (safePath(ws.meta.root, msg.cwd) || ws.meta.root) : ws.meta.root;
             try {
               const proc = pty.spawn(shell, [], {

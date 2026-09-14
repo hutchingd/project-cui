@@ -4,7 +4,7 @@
 FROM node:20-alpine
 
 # node-pty requires native compilation on Alpine (musl).
-RUN apk add --no-cache python3 make g++ && apk add --no-cache bash
+RUN apk add --no-cache python3 make g++ bash
 
 WORKDIR /app
 
@@ -22,9 +22,12 @@ ENV NODE_ENV=production
 # EXPOSE documents the port; Railway/Render inject PORT at runtime.
 EXPOSE 3000
 
+# Ensure /data exists even if no volume is mounted (Railway, etc.)
+RUN mkdir -p /data
+
 VOLUME /data
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3300)+'/api/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "server/index.js"]
