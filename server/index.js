@@ -4,6 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 const { Server } = require('ws');
+const os = require('os');
 const pty = require('node-pty');
 
 /* Determine the default shell at startup. Prefer bash, fall back to sh for
@@ -18,7 +19,6 @@ const SHELL_PATH = process.env.SHELL || (() => {
   } catch (_) {}
   return '/bin/sh';
 })();
-const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 3300;

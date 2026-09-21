@@ -9,8 +9,16 @@ RUN apk add --no-cache python3 make g++ bash
 WORKDIR /app
 
 # Install deps first for better layer caching.
+# Fall back to `npm install` if the lockfile drifts from package.json, so a
+# wrong/empty package.json in the build context can never silently install
+# zero packages (which caused "Cannot find module 'express'" at boot).
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --no-audit --no-fund \
+    || npm install --omit=dev --no-audit --no-fund
+
+# Fail the build loudly if any runtime dependency is missing from the image,
+# instead of crashing at boot with "Cannot find module 'X'".
+RUN node -e "['express','@babel/core','@babel/preset-react','node-pty','ws'].forEach(m=>require(m)); console.log('deps ok')"
 
 COPY server ./server
 COPY public ./public
